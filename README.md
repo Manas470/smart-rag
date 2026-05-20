@@ -323,4 +323,5 @@ PRs welcome. Open an issue first for large changes.
 
 ## License
 
-MIT © 2026 Manas Mourya
+MIT © 2026 venkatamanas Raghupatruni
+
