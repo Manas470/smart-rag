@@ -1,7 +1,5 @@
 # SmartRAG — Case Study
 
-## 30/30 AI Projects | Day 2
-
 ---
 
 ## The Real-World Problem
@@ -136,4 +134,4 @@ This project is a foundation. Here's what you can layer on top:
 
 ---
 
-*Part of the 30/30 AI Projects series — 30 production-grade AI systems in 30 days.*
+*SmartRAG — github.com/manas470/smart-rag*

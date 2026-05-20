@@ -1,9 +1,7 @@
 # 🧠 SmartRAG — Builder's Thoughts
 
-> **Day 2 of the 30/30 AI Projects Challenge**
 > What I was thinking, what broke, what I changed, and what I'd do differently.
 
-[![30/30](https://img.shields.io/badge/30%2F30-Day%202-6366f1)](https://github.com/manas470/smart-rag)
 [![Stack](https://img.shields.io/badge/Stack-FastAPI%20%7C%20LangChain%20%7C%20Next.js-black)](https://github.com/manas470/smart-rag)
 [![Status](https://img.shields.io/badge/Status-Shipped-22c55e)](https://github.com/manas470/smart-rag)
 
@@ -299,10 +297,4 @@ open http://localhost:8000/docs   # API docs
 ## Connect
 
 - **GitHub**: [@manas470](https://github.com/manas470)
-- **Series**: [30/30 AI Projects](https://github.com/manas470)
-- **Day 1**: [TokenOptim](https://github.com/manas470/tokenoptim) — Cut LLM costs 40–75%
-- **Day 3 coming**: CodeReviewAI — Automated PR review agent
-
----
-
-*Built in one day as part of the 30/30 AI Projects challenge — 30 production-grade AI systems in 30 days.*
+- **Repo**: [github.com/manas470/smart-rag](https://github.com/manas470/smart-rag)

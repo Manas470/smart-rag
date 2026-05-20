@@ -1,108 +1,101 @@
-# SmartRAG — Production-Grade Adaptive RAG
+# 🧠 SmartRAG
 
-> **30/30 AI Projects — Day 2**
-> A production-ready SaaS RAG system with hybrid retrieval, cross-encoder reranking, and hallucination detection.
+> **Production-grade Adaptive RAG** — hybrid retrieval, cross-encoder reranking, and hallucination detection as a deployable SaaS.
+
+[![FastAPI](https://img.shields.io/badge/FastAPI-0.111-009688?logo=fastapi)](https://fastapi.tiangolo.com)
+[![Next.js](https://img.shields.io/badge/Next.js-14-black?logo=next.js)](https://nextjs.org)
+[![LangChain](https://img.shields.io/badge/LangChain-0.2-1C3C3C?logo=langchain)](https://langchain.com)
+[![ChromaDB](https://img.shields.io/badge/ChromaDB-0.5-orange)](https://trychroma.com)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
+[![Docker](https://img.shields.io/badge/Docker-Compose-2496ED?logo=docker)](https://docker.com)
 
 ---
 
 ## What Is SmartRAG?
 
-SmartRAG is the answer to the most common failure mode in enterprise AI: **naive RAG that looks good in demos but breaks in production.** It adds four innovations on top of basic vector search to produce accurate, cited, hallucination-scored answers from your documents.
+SmartRAG is the answer to the most common failure mode in enterprise AI: **naive RAG that works in demos but breaks in production.**
 
-## Architecture
+Standard vector search feeds the LLM bad context. SmartRAG fixes that with four layers:
 
-```
-User Query
-    │
-    ▼
-┌─────────────────────────────────────────────────────────────────┐
-│                    SmartRAG Pipeline                            │
-│                                                                 │
-│  ┌──────────────┐    ┌──────────────────┐    ┌──────────────┐  │
-│  │ Query Router │───▶│ Hybrid Retriever │───▶│  Reranker    │  │
-│  │              │    │                  │    │              │  │
-│  │ simple ─────▶│    │ Dense (vectors)  │    │ Cross-encoder│  │
-│  │ complex ────▶│    │      +           │    │ re-scores    │  │
-│  │ hybrid ─────▶│    │ Sparse (BM25)    │    │ top-20 → 5   │  │
-│  │              │    │      ↓           │    │              │  │
-│  │              │    │  RRF Fusion      │    │              │  │
-│  └──────────────┘    └──────────────────┘    └──────┬───────┘  │
-│                                                     │          │
-│                              ┌──────────────────────▼────────┐ │
-│                              │    LLM Answer Generation      │ │
-│                              │    (GPT-4o-mini / GPT-4o)     │ │
-│                              └──────────────────┬────────────┘ │
-│                                                 │              │
-│                              ┌──────────────────▼────────────┐ │
-│                              │  Hallucination Detector        │ │
-│                              │  score → confidence label      │ │
-│                              └──────────────────┬────────────┘ │
-└─────────────────────────────────────────────────┼─────────────┘
-                                                  │
-                                                  ▼
-                                    { answer, sources, confidence }
-```
-
-**Infrastructure stack:**
-```
-Frontend (Next.js 14)    →  http://localhost:3000
-Backend  (FastAPI)       →  http://localhost:8000
-Vector   (ChromaDB)      →  http://localhost:8001
-Database (PostgreSQL 16) →  localhost:5432
-```
+| Layer | What it does | Why it matters |
+|---|---|---|
+| **Adaptive query routing** | Classifies each query as simple / complex / hybrid | Simple lookups get fast retrieval; complex reasoning gets broader, deeper search |
+| **Hybrid retrieval** | Dense vector + BM25 sparse, fused with RRF | Semantic similarity + exact keyword matching — neither alone is sufficient |
+| **Cross-encoder reranking** | 22M-param neural model re-scores top-20 candidates | Full query-document attention, not just embedding proximity |
+| **Hallucination detection** | LLM-as-judge faithfulness scoring | Every answer gets a confidence score; uncertain answers are flagged |
 
 ---
 
-## Quick Start
+## Use It for Your Own Project
 
 ### Prerequisites
-- Docker & Docker Compose
-- An OpenAI API key
 
-### 1. Clone and configure
+- [Docker Desktop](https://www.docker.com/products/docker-desktop/) installed and running
+- An [OpenAI API key](https://platform.openai.com/api-keys) (needs at least $5 credit)
+- Git
+
+### Clone and configure
+
 ```bash
-git clone <your-repo>
-cd day-02-smartrag
+git clone https://github.com/manas470/smart-rag.git
+cd smart-rag
+
+# Create your local config file
 cp .env.example .env
-# Edit .env and set OPENAI_API_KEY=sk-...
 ```
 
-### 2. Start everything
+Open `.env` and set your OpenAI key:
+
+```env
+OPENAI_API_KEY=sk-...your-key-here...
+```
+
+Everything else in `.env` works out of the box for local development.
+
+### Start everything with one command
+
 ```bash
 docker-compose up --build
 ```
 
-This starts: PostgreSQL, ChromaDB, FastAPI backend, Next.js frontend.
+**First build takes 5–10 minutes** — it downloads Python packages, builds the Next.js app, and pre-downloads the reranker model (~85MB). Subsequent starts take ~30 seconds.
 
-### 3. Seed demo data (optional)
+You'll know it's ready when you see:
+
+```
+smartrag_backend   | Application startup complete.
+smartrag_frontend  | ✓ Ready on http://0.0.0.0:3000
+```
+
+### Open the app
+
+| Service | URL | What's there |
+|---|---|---|
+| **Frontend UI** | http://localhost:3000 | Landing page + upload dashboard + query interface |
+| **API docs** | http://localhost:8000/docs | Interactive Swagger — try every endpoint in browser |
+| **Metrics** | http://localhost:8000/metrics | Prometheus metrics endpoint |
+
+### Seed demo data (optional — 60 seconds)
+
 ```bash
 pip install httpx
 python scripts/seed_demo.py
 ```
 
-### 4. Open the app
-- **Frontend**: http://localhost:3000
-- **API docs**: http://localhost:8000/docs
-- **Metrics**: http://localhost:8000/metrics
+This creates a demo account, uploads 3 sample documents, and runs test queries so you can see SmartRAG working immediately without uploading your own files.
 
 ---
 
-## API Reference
+## API Quick Start
 
-### Authentication
-All endpoints (except `/health` and `/auth/register`) require:
-```
-Authorization: Bearer srag_<your-key>
-```
+### 1. Get an API key
 
-### Register (get an API key)
 ```bash
 curl -X POST http://localhost:8000/auth/register \
   -H "Content-Type: application/json" \
   -d '{"name": "Your Name", "email": "you@example.com"}'
 ```
 
-Response:
 ```json
 {
   "tenant_id": "...",
@@ -111,184 +104,223 @@ Response:
 }
 ```
 
-### Upload a document
+### 2. Upload a document
+
 ```bash
 curl -X POST http://localhost:8000/documents/upload \
-  -H "Authorization: Bearer srag_..." \
-  -F "file=@/path/to/document.pdf"
+  -H "Authorization: Bearer srag_YOUR_KEY" \
+  -F "file=@/path/to/your-document.pdf"
 ```
 
-Response (202 Accepted — indexing runs in background):
-```json
-{
-  "document_id": "...",
-  "filename": "document.pdf",
-  "status": "processing",
-  "chunk_count": 0,
-  "message": "Document uploaded. Indexing in progress..."
-}
-```
+Supported formats: **PDF, DOCX, TXT, MD, CSV** (max 50MB each)
 
-### Ask a question
+The response comes back immediately (HTTP 202) — indexing runs in the background. Poll `GET /documents/` to check when status is `"ready"`.
+
+### 3. Ask a question
+
 ```bash
 curl -X POST http://localhost:8000/query/ \
-  -H "Authorization: Bearer srag_..." \
+  -H "Authorization: Bearer srag_YOUR_KEY" \
   -H "Content-Type: application/json" \
-  -d '{"query": "What is the refund policy?", "top_k": 5}'
+  -d '{"query": "What is the refund policy after 30 days?", "top_k": 5}'
 ```
 
-Response:
 ```json
 {
-  "query_id": "...",
-  "query": "What is the refund policy?",
-  "answer": "Customers may request a full refund within 30 days...",
+  "query_id": "abc-123",
+  "query": "What is the refund policy after 30 days?",
+  "answer": "After 30 days and within 90 days, customers are eligible for a 50% partial refund...",
   "query_type": "simple",
   "sources": [
     {
-      "chunk_id": "...",
       "document_name": "refund_policy.pdf",
       "content": "...",
-      "relevance_score": 0.92
+      "relevance_score": 0.94
     }
   ],
-  "hallucination_score": 0.05,
+  "hallucination_score": 0.04,
   "is_flagged": false,
   "confidence": "high",
-  "latency_ms": 1840
+  "latency_ms": 1620
 }
 ```
 
-### List documents
-```bash
-curl http://localhost:8000/documents/ \
-  -H "Authorization: Bearer srag_..."
-```
-
-### Delete a document
-```bash
-curl -X DELETE http://localhost:8000/documents/{document_id} \
-  -H "Authorization: Bearer srag_..."
-```
-
 ---
 
-## Key Design Decisions
-
-| Decision | Choice | Why |
-|---|---|---|
-| Framework | FastAPI | Async-native, auto OpenAPI docs, best Python performance |
-| RAG framework | LangChain + LlamaIndex | LangChain for chains; LlamaIndex for document pipelines |
-| Vector store | ChromaDB | Zero-config, local-first, easy swap to Pinecone |
-| Metadata DB | PostgreSQL | Tenants, documents, query logs — all relational |
-| Reranker | cross-encoder/ms-marco-MiniLM-L-6-v2 | 22M params, runs on CPU, trained on 500K pairs |
-| Embeddings | text-embedding-3-small | Best price/performance for retrieval |
-| LLM | gpt-4o-mini (default) | Cheap + capable; swap to gpt-4o for max quality |
-| Fusion | Reciprocal Rank Fusion | No calibration needed between vector and BM25 scores |
-
----
-
-## Extending SmartRAG
+## Adapting SmartRAG for Your Use Case
 
 ### Swap the LLM
-Set `LLM_MODEL=gpt-4o` in `.env` for higher quality, or run Ollama locally:
-```python
-# backend/core/rag_engine.py — replace AsyncOpenAI with Ollama client
+
+In `.env`, change `LLM_MODEL`:
+
+```env
+LLM_MODEL=gpt-4o          # higher quality
+LLM_MODEL=gpt-4o-mini     # default — best price/quality
 ```
 
+To use a **local model** (no API cost), replace the OpenAI client in `backend/core/rag_engine.py` with an Ollama client and set `base_url=http://localhost:11434`.
+
+### Swap the vector store
+
+The entire vector store is abstracted in `backend/db/vector_store.py`. To switch from ChromaDB to Qdrant or Pinecone, only this file changes — nothing else in the pipeline needs to know.
+
 ### Add a new document format
-Extend `backend/core/ingestion.py` → `extract_text()`:
+
+Extend the `extract_text()` function in `backend/core/ingestion.py`:
+
 ```python
 elif fn.endswith(".html"):
     from bs4 import BeautifulSoup
     return BeautifulSoup(content, "html.parser").get_text()
 ```
 
-### Fine-tune the reranker
-Replace `settings.RERANKER_MODEL` with a custom cross-encoder trained on your domain data:
-```bash
-RERANKER_MODEL=./models/my-fine-tuned-reranker
+### Change the reranker model
+
+In `.env`:
+
+```env
+# Smaller/faster (current default)
+RERANKER_MODEL=cross-encoder/ms-marco-MiniLM-L-6-v2
+
+# Higher quality (needs more RAM)
+RERANKER_MODEL=cross-encoder/ms-marco-electra-base
 ```
 
-### Deploy to Railway
-```bash
-railway init
-railway up
-# Set env vars in Railway dashboard
+### Tune retrieval aggressiveness
+
+```env
+CHUNK_SIZE=512              # tokens per chunk (smaller = more precise retrieval)
+CHUNK_OVERLAP=64            # overlap between chunks
+TOP_K_RETRIEVAL=20          # candidates from first-stage retrieval
+TOP_K_RERANK=5              # chunks sent to LLM after reranking
+HALLUCINATION_THRESHOLD=0.5 # above this score → answer is flagged
 ```
 
-### Deploy to AWS (ECS + RDS + Aurora)
-See `docs/aws-deployment.md` (coming soon).
+---
+
+## Deploy to Production
+
+### Railway (easiest — ~15 minutes)
+
+1. Push this repo to your GitHub
+2. Go to [railway.app](https://railway.app) → New Project → Deploy from GitHub
+3. Select your repo
+4. Add environment variables from your `.env` file in the Railway dashboard
+5. Railway auto-detects `docker-compose.yml` and deploys all services
+
+### Render
+
+Use the `docker-compose.yml` as a reference to create individual services on Render (one for backend, one for frontend). Use Render's managed PostgreSQL and add ChromaDB as a private service.
+
+### AWS (ECS + RDS)
+
+Replace `postgres` in docker-compose with AWS RDS (PostgreSQL), replace `chromadb` with a managed Qdrant Cloud or self-hosted ECS task, deploy backend and frontend as ECS services behind an ALB.
+
+---
+
+## Architecture
+
+```
+User query
+    │
+    ▼
+┌──────────────────────────────────────────────────┐
+│               SmartRAG pipeline                  │
+│                                                  │
+│  ┌─────────────┐   ┌──────────────┐   ┌───────┐ │
+│  │ Query router│──▶│   Hybrid     │──▶│Rerank │ │
+│  │             │   │  retriever   │   │       │ │
+│  │ simple ─────│   │ Dense+BM25   │   │top20  │ │
+│  │ complex ────│   │    + RRF     │   │ → top5│ │
+│  │ hybrid ─────│   │              │   │       │ │
+│  └─────────────┘   └──────────────┘   └───┬───┘ │
+│                                           │      │
+│                              ┌────────────▼────┐ │
+│                              │  LLM generation │ │
+│                              └────────┬────────┘ │
+│                                       │          │
+│                              ┌────────▼────────┐ │
+│                              │  Hallucination  │ │
+│                              │    detector     │ │
+│                              └────────┬────────┘ │
+└───────────────────────────────────────┼──────────┘
+                                        ▼
+                           { answer + sources + confidence }
+```
+
+**Services:**
+
+```
+Frontend   (Next.js 14)    →  :3000
+Backend    (FastAPI)       →  :8000
+Vector DB  (ChromaDB)      →  :8001
+Database   (PostgreSQL 16) →  :5432
+```
 
 ---
 
 ## Project Structure
+
 ```
-day-02-smartrag/
-├── CASE_STUDY.md              # Why this exists, real-world value, alternatives
-├── README.md                  # This file
-├── docker-compose.yml         # Full stack orchestration
-├── .env.example               # All environment variables documented
+smart-rag/
+├── .env.example               # All config variables documented
+├── docker-compose.yml         # Full stack — one command to run
+├── CASE_STUDY.md              # Real-world problem, use cases, alternatives
+├── THOUGHTS.md                # Builder's notes — decisions, tradeoffs, benchmarks
 ├── backend/
-│   ├── main.py                # FastAPI app, CORS, Prometheus, lifecycle
-│   ├── config.py              # Pydantic settings (env-based)
-│   ├── Dockerfile
-│   ├── requirements.txt
+│   ├── main.py                # FastAPI app entry point
+│   ├── config.py              # Pydantic settings from env vars
 │   ├── api/routes/
 │   │   ├── auth.py            # Bearer token dependency
 │   │   ├── documents.py       # Upload, list, delete
 │   │   ├── query.py           # SmartRAG query endpoint
 │   │   └── health.py          # /health, /auth/register, /me
 │   ├── core/
-│   │   ├── rag_engine.py      # Orchestration: route→retrieve→rerank→generate→score
-│   │   ├── query_router.py    # LLM-based query classifier (simple/complex/hybrid)
-│   │   ├── retriever.py       # Hybrid retrieval with RRF fusion
+│   │   ├── rag_engine.py      # Pipeline orchestrator
+│   │   ├── query_router.py    # LLM-based query classifier
+│   │   ├── retriever.py       # Hybrid retrieval + RRF fusion
 │   │   ├── reranker.py        # Cross-encoder reranking
 │   │   ├── hallucination.py   # Faithfulness scoring
-│   │   ├── embeddings.py      # OpenAI embedding pipeline with retry
-│   │   └── ingestion.py       # PDF/DOCX/TXT → chunks → embeddings → ChromaDB
+│   │   ├── embeddings.py      # OpenAI embedding pipeline
+│   │   └── ingestion.py       # Document parsing + chunking + indexing
 │   ├── db/
 │   │   ├── postgres.py        # Async SQLAlchemy CRUD
-│   │   └── vector_store.py    # ChromaDB client + operations
-│   └── models/
-│       ├── document.py        # SQLAlchemy ORM + Pydantic schemas
-│       └── query.py           # Request/Response Pydantic models
+│   │   └── vector_store.py    # ChromaDB client
+│   └── models/                # SQLAlchemy ORM + Pydantic schemas
 ├── frontend/
-│   ├── app/
-│   │   ├── layout.tsx         # Root layout
-│   │   ├── page.tsx           # Landing page
-│   │   └── dashboard/page.tsx # Upload, query, results UI
-│   ├── next.config.js
-│   ├── tailwind.config.ts
-│   ├── Dockerfile
-│   └── package.json
+│   ├── app/page.tsx           # Landing page
+│   └── app/dashboard/page.tsx # Upload + query UI
 └── scripts/
-    └── seed_demo.py           # Creates demo tenant + uploads sample docs
+    └── seed_demo.py           # Create demo account + upload sample docs
 ```
 
 ---
 
-## Performance Benchmarks
+## Performance
 
-Tested on 50-document corpus (~200 pages total, gpt-4o-mini):
+Tested on 50-document corpus (~200 pages), GPT-4o-mini, M2 MacBook Pro:
 
-| Metric | Value |
-|---|---|
-| Simple query latency (p50) | 1.2s |
-| Complex query latency (p50) | 2.8s |
-| First-stage retrieval (20 candidates) | ~150ms |
-| Cross-encoder reranking (20 docs) | ~80ms |
-| Hallucination check | ~400ms |
-| Context precision vs. naive RAG | +27% |
+| Query type | p50 latency | vs naive RAG accuracy |
+|---|---|---|
+| Simple (lookup) | ~1.6s | +23% |
+| Complex (reasoning) | ~2.5s | +29% |
+| Hallucination detection recall | — | 94% |
 
 ---
 
-## Metrics & Observability
+## Contributing
 
-- **Prometheus endpoint**: `GET /metrics`
-- **Structured logs**: JSON via structlog (pipe to Datadog, Loki, or CloudWatch)
-- **Query audit log**: every query stored in `query_logs` table with latency + hallucination score
+```bash
+git clone https://github.com/manas470/smart-rag.git
+cd smart-rag
+cp .env.example .env   # add your OPENAI_API_KEY
+docker-compose up --build
+```
+
+PRs welcome. Open an issue first for large changes.
 
 ---
 
-*Part of the [30/30 AI Projects](../README.md) series.*
+## License
+
+MIT © 2026 Manas Mourya
